@@ -110,6 +110,45 @@ func applyAction(i int, j int, player int) bool {
 	}
 }
 
+func miniMax(depth int, player int) []int {
+	const MaxUint = ^uint(0)
+	const MinUint = 0
+	const MaxInt = int(MaxUint >> 1)
+	const MinInt = -MaxInt - 1
+	var maximise []int
+	if player == AGENT {
+		maximise = []int{-1, -1, MinInt}
+	} else {
+		maximise = []int{-1, -1, MaxInt}
+	}
+
+	if depth == 0 || gameOver(board) {
+		score := eval(board)
+		return []int{-1, -1, score}
+	}
+
+	// playerrow := []int{i, j}
+	for _, row := range blankTiles(board) {
+		i, j := row[0], row[1]
+		board[i][j] = player
+		player1 := player
+		player1 *= -1
+		score := miniMax(depth-1, player1)
+		board[i][j] = 0
+		score[0], score[1] = i, j
+		if player == AGENT {
+			if score[2] > maximise[2] {
+				maximise = score
+			}
+		} else {
+			if score[2] < maximise[2] {
+				maximise = score
+			}
+		}
+	}
+	return maximise
+}
+
 func main() {
 	var loc int
 	stdin := bufio.NewReader(os.Stdin)
@@ -125,10 +164,20 @@ func main() {
 	player := 1
 
 	for len(blankTiles(board)) > 0 && !gameOver(board) {
-		fmt.Fscan(stdin, &loc)
-		coord := actions[loc]
-		player *= -1
-		applyAction(coord.x, coord.y, player)
+		if player < 0 {
+			fmt.Fscan(stdin, &loc)
+			coord := actions[loc]
+			if validAction(coord.x, coord.y) {
+				player *= -1
+				applyAction(coord.x, coord.y, -1)
+			}
+		} else {
+			move := miniMax(len(blankTiles(board)), AGENT)
+			// fmt.Println("%d %d", move[0], move[1])
+			player *= -1
+			applyAction(move[0], move[1], AGENT)
+		}
+		print("\033[H\033[2J")
 		printboard(board)
 	}
 }
